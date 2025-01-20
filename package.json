@@ -1,20 +1,23 @@
 {
   "name": "node-ydl-api",
-  "description": "",
   "version": "1.0.0",
+  "description": "API for YouTube downloads using serverless functions on Netlify",
   "main": "functions/server.js",
-  "scripts": {
-      "build": "netlify deploy --prod",
-      "start": "functions/server.js"
-  },
-  "author": "",
-  "license": "ISC",
   "type": "module",
+  "scripts": {
+    "build": "npm install && netlify deploy --auth $NETLIFY_AUTH_TOKEN --prod --dir=.", 
+    "start": "node functions/server.js"
+  },
   "dependencies": {
-      "cors": "^2.8.5",
-      "express": "^4.17.1",
-      "ytdl-core": "npm:@distube/ytdl-core@^4.15.8",
-      "netlify-cli": "18.0.1",
-      "serverless-http": "3.2.0"
-  }
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "ytdl-core": "npm:@distube/ytdl-core@^4.15.8",
+    "serverless-http": "^3.2.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^18.0.1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
