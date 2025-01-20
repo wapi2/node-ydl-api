@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "netlify dev",
     "prebuild": "npm install",
-    "build": "netlify functions:build",
+    "build": "netlify functions:build --src functions",
     "deploy": "netlify deploy --prod"
   },
   "dependencies": {
