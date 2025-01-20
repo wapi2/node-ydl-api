@@ -55,7 +55,6 @@ dist/
 build/
 
 .aider*
-package-lock.json
 # Local Netlify folder
 .netlify/*
 !.netlify/state.json
