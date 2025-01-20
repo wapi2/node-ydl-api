@@ -95,5 +95,6 @@ router.get("/mp4", async (req, res) => {
 }); */
 //router.use(['/info', '/mp3', '/mp4'], authenticateToken);
 
-app.use('/.netlify/functions/api', router);
-module.exports.handler = serverless(app);
+app.use('/.netlify/functions/server', router);
+//module.exports.handler = serverless(app);
+export const handler = serverless(app);
