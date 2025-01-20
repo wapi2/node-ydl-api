@@ -1,13 +1,16 @@
 const express = require("express");
+const serverless = require("serverless-http");
 const ytdl = require("ytdl-core");
 const cors = require("cors");
 const authenticateToken = require('./auth.middleware');
 
 const app = express();
 app.use(cors());
+const router = express.Router();
+
 app.use(['/info', '/mp3', '/mp4'], authenticateToken);
 
-app.get("/", (req, res) => {
+router.get("/", (req, res) => {
     const ping = new Date();
     ping.setHours(ping.getHours() - 3);
     console.log(
@@ -16,7 +19,7 @@ app.get("/", (req, res) => {
     res.sendStatus(200);
 });
 
-app.get("/info", async (req, res) => {
+router.get("/info", async (req, res) => {
     const { url } = req.query;
 
     if (url) {
@@ -37,7 +40,7 @@ app.get("/info", async (req, res) => {
     }
 });
 
-app.get("/mp3", async (req, res) => {
+router.get("/mp3", async (req, res) => {
     const { url } = req.query;
 
     if (url) {
@@ -61,7 +64,7 @@ app.get("/mp3", async (req, res) => {
     }
 });
 
-app.get("/mp4", async (req, res) => {
+router.get("/mp4", async (req, res) => {
     const { url } = req.query;
 
     if (url) {
@@ -87,6 +90,10 @@ app.get("/mp4", async (req, res) => {
     }
 });
 
-app.listen(process.env.PORT || 3500, () => {
+/* app.listen(process.env.PORT || 3500, () => {
     console.log("Server on");
-});
+}); */
+//router.use(['/info', '/mp3', '/mp4'], authenticateToken);
+
+app.use('/.netlify/functions/api', router);
+module.exports.handler = serverless(app);
