@@ -2,14 +2,16 @@ import express from "express";
 import serverless from "serverless-http";
 import ytdl from "ytdl-core";
 import cors from "cors";
-import authenticateToken from './auth_middleware.js'; 
+import authenticateToken from './auth_middleware.js';
 
 const app = express();
 app.use(cors());
 const router = express.Router();
 
-// Aplicar el middleware de autenticación ANTES de las rutas que lo necesitan
-router.use(['/info', '/mp3', '/mp4'], authenticateToken);
+// Aplicar el middleware de autenticación individualmente para cada ruta
+router.use('/info', authenticateToken);
+router.use('/mp3', authenticateToken);
+router.use('/mp4', authenticateToken);
 
 router.get("/", (req, res) => {
     const ping = new Date();
@@ -91,11 +93,5 @@ router.get("/mp4", async (req, res) => {
     }
 });
 
-/* app.listen(process.env.PORT || 3500, () => {
-    console.log("Server on");
-}); */
-
-
 app.use('/.netlify/functions/server', router);
-//module.exports.handler = serverless(app);
 export const handler = serverless(app);
