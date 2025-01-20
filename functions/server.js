@@ -8,7 +8,7 @@ const app = express();
 app.use(cors());
 const router = express.Router();
 
-app.use(['/info', '/mp3', '/mp4'], authenticateToken);
+//app.use(['/info', '/mp3', '/mp4'], authenticateToken);
 
 router.get("/", (req, res) => {
     const ping = new Date();
@@ -93,7 +93,8 @@ router.get("/mp4", async (req, res) => {
 /* app.listen(process.env.PORT || 3500, () => {
     console.log("Server on");
 }); */
-//router.use(['/info', '/mp3', '/mp4'], authenticateToken);
+
+router.use(['/info', '/mp3', '/mp4'], authenticateToken);
 
 app.use('/.netlify/functions/server', router);
 //module.exports.handler = serverless(app);
