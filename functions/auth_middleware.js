@@ -1,4 +1,4 @@
-import config  from './config';
+import config  from './config.js';
 
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
@@ -15,4 +15,4 @@ function authenticateToken(req, res, next) {
     next();
 }
 
-module.exports = authenticateToken;
+export default authenticateToken;  // Cambiar a export default
