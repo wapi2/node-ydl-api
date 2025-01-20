@@ -1,4 +1,4 @@
-const config = require('./config');
+import config  from './config';
 
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];

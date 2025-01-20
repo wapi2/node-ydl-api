@@ -1,8 +1,8 @@
-const express = require("express");
-const serverless = require("serverless-http");
-const ytdl = require("ytdl-core");
-const cors = require("cors");
-const authenticateToken = require('./auth_middleware');
+import express from "express";
+import serverless from "serverless-http";
+import ytdl from "ytdl-core";
+import cors from "cors";
+import { authenticateToken } from './auth_middleware';
 
 const app = express();
 app.use(cors());
