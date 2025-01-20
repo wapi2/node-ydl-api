@@ -1,6 +1,6 @@
 [build]
-publish = "."
-command = "npm run build"
+  command = "npm run build"
+  publish = "."
 
 [functions]
-directory = "functions"
+  directory = "functions"

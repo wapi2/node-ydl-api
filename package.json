@@ -5,9 +5,9 @@
   "main": "functions/server.js",
   "type": "module",
   "scripts": {
-    "build": "npm install && netlify deploy --auth $NETLIFY_AUTH_TOKEN --prod --dir=.", 
-    "start": "node functions/server.js"
-  },
+  "build": "npm install && netlify deploy --auth $NETLIFY_AUTH_TOKEN --prod",
+  "start": "node functions/server.js"
+},
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.17.1",
