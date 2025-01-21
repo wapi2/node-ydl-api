@@ -14,55 +14,75 @@ app.use(cors({
 
 const router = express.Router();
 
+// Configuración de cookies para YouTube
+const cookies = [
+  {
+    "domain": ".youtube.com",
+    "expirationDate": 1736793326.182546,
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "LOGIN_INFO",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "AGGVVk7keKQ:QUQ3MjNmejJrUzFZNktfd1JkdGdJb0YxM1pweUZNMjM5TmFPd2puR0s5QUxjZzFxbDRBd19EY0dLS3RlbFZ5aDBKT3QtQTJIaEJ4RkxZd2ZiTDBIZmJVeVVmNC1vNTR4X0tiZk9McG5CZ25sOVY5MHhOYkpKS09ELWp4dmlyS29IejVyakhVQnBLZEdxSUhHREYySmRJNUx6azN5ZHhn"
+  },
+  {
+    "domain": ".youtube.com",
+    "expirationDate": 1736793326.182637,
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "VISITOR_INFO1_LIVE",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": false,
+    "value": "4VwPMkB7W5A"
+  },
+  {
+    "domain": ".youtube.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "YSC",
+    "path": "/",
+    "sameSite": "no_restriction",
+    "secure": true,
+    "session": true,
+    "value": "ZZZ999XXX111"
+  },
+  {
+    "domain": ".youtube.com",
+    "expirationDate": 1736793326.182601,
+    "hostOnly": false,
+    "httpOnly": false,
+    "name": "PREF",
+    "path": "/",
+    "sameSite": "unspecified",
+    "secure": true,
+    "session": false,
+    "value": "tz=America.Lima"
+  }
+];
+
+// Crear el agente de ytdl con las cookies
+const agent = ytdl.createAgent(cookies);
+
+// Opciones comunes para ytdl
 const ytdlOptions = {
+    agent,
     requestOptions: {
         headers: {
-            // Configuración de cookies y headers para evitar restricciones
-            cookie: process.env.COOKIE || 'CONSENT=YES+; Path=/; Domain=.youtube.com;',
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'x-forwarded-for': '66.249.66.1'
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
     }
 };
 
+// Rutas existentes
 router.use(['/info', '/mp3', '/mp4'], authenticateToken);
 
 router.get("/", (req, res) => {
     res.sendStatus(200);
-});
-
-// Endpoint para ver versiones de paquetes
-router.get("/packages", authenticateToken, async (req, res) => {
-    try {
-        // Leer las versiones directamente de los node_modules
-        const dependencies = {
-            node: process.version,
-            npm: process.env.npm_version || 'not available',
-            dependencies: {
-                express: require('express/package.json').version,
-                'ytdl-core': require('ytdl-core/package.json').version,
-                cors: require('cors/package.json').version,
-                'serverless-http': require('serverless-http/package.json').version,
-            },
-            environment: {
-                NODE_ENV: process.env.NODE_ENV,
-                NETLIFY: process.env.NETLIFY,
-                CONTEXT: process.env.CONTEXT,
-                DEPLOY_URL: process.env.DEPLOY_URL,
-                DEPLOY_PRIME_URL: process.env.DEPLOY_PRIME_URL,
-                URL: process.env.URL
-            }
-        };
-
-        res.json(dependencies);
-    } catch (error) {
-        console.error('Error getting package versions:', error);
-        res.status(500).json({ 
-            error: "Error reading package versions",
-            details: error.message,
-            stack: error.stack
-        });
-    }
 });
 
 router.get("/info", async (req, res) => {
@@ -135,7 +155,7 @@ router.get("/mp3", async (req, res) => {
         stream.on('error', (err) => {
             console.error('Stream error:', err);
             if (!res.headersSent) {
-                res.status(500).json({ error: 'Error during streaming' });
+                res.status(500).json({ error: 'Error during streaming', details: err.message });
             }
         });
 
@@ -183,7 +203,7 @@ router.get("/mp4", async (req, res) => {
         stream.on('error', (err) => {
             console.error('Stream error:', err);
             if (!res.headersSent) {
-                res.status(500).json({ error: 'Error during streaming' });
+                res.status(500).json({ error: 'Error during streaming', details: err.message });
             }
         });
 
@@ -191,6 +211,35 @@ router.get("/mp4", async (req, res) => {
     } catch (error) {
         console.error('Error in /mp4:', error);
         res.status(500).json({ error: error.message || "Error downloading video" });
+    }
+});
+
+// Keep the packages endpoint
+router.get("/packages", authenticateToken, async (req, res) => {
+    try {
+        const dependencies = {
+            node: process.version,
+            npm: process.env.npm_version || 'not available',
+            dependencies: {
+                express: require('express/package.json').version,
+                'ytdl-core': require('ytdl-core/package.json').version,
+                cors: require('cors/package.json').version,
+                'serverless-http': require('serverless-http/package.json').version,
+            },
+            environment: {
+                NODE_ENV: process.env.NODE_ENV,
+                NETLIFY: process.env.NETLIFY,
+                CONTEXT: process.env.CONTEXT
+            }
+        };
+
+        res.json(dependencies);
+    } catch (error) {
+        console.error('Error getting package versions:', error);
+        res.status(500).json({ 
+            error: "Error reading package versions",
+            details: error.message
+        });
     }
 });
 
