@@ -1,6 +1,6 @@
 import express from "express";
 import serverless from "serverless-http";
-import { play } from "play-dl";
+import * as playdl from "play-dl";  // Cambiado: importación correcta
 import cors from "cors";
 import { authenticateToken } from './auth_middleware.js';
 
@@ -28,13 +28,13 @@ router.get("/info", async (req, res) => {
             return res.status(400).json({ error: "Invalid query - URL is required" });
         }
 
-        const videoInfo = await play.video_info(url);
+        const videoInfo = await playdl.video_basic_info(url);  // Cambiado: usando video_basic_info
         
         res.json({ 
             title: videoInfo.video_details.title,
             thumbnail: videoInfo.video_details.thumbnails[0].url,
             duration: videoInfo.video_details.durationInSec,
-            author: videoInfo.video_details.channel.name,
+            author: videoInfo.video_details.channel?.name,
             description: videoInfo.video_details.description,
             views: videoInfo.video_details.views,
             uploadedAt: videoInfo.video_details.uploadedAt
@@ -53,8 +53,11 @@ router.get("/mp3", async (req, res) => {
             return res.status(400).json({ error: "Invalid query - URL is required" });
         }
 
-        const videoInfo = await play.video_info(url);
-        const stream = await play.stream(url, { discordPlayerCompatibility: true });
+        const videoInfo = await playdl.video_basic_info(url);
+        const stream = await playdl.stream(url, { 
+            discordPlayerCompatibility: true,
+            quality: 2  // high quality audio
+        });
         
         const videoName = videoInfo.video_details.title.replace(/[^\w\s]/gi, '');
         
@@ -83,8 +86,11 @@ router.get("/mp4", async (req, res) => {
             return res.status(400).json({ error: "Invalid query - URL is required" });
         }
 
-        const videoInfo = await play.video_info(url);
-        const stream = await play.stream(url, { quality: 1080 }); // Highest quality
+        const videoInfo = await playdl.video_basic_info(url);
+        const stream = await playdl.stream(url, { 
+            quality: 1080,  // Highest quality
+            htmlOnlyQuality: true
+        });
 
         const videoName = videoInfo.video_details.title.replace(/[^\w\s]/gi, '');
 
