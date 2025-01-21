@@ -8,9 +8,8 @@
   external_node_modules = [
     "express",
     "serverless-http",
-    "ytdl-core",
-    "cors",
-    "@distube/ytdl-core"
+    "play-dl",
+    "cors"
   ]
   included_files = ["functions/**/*"]
 

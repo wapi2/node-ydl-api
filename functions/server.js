@@ -1,6 +1,6 @@
 import express from "express";
 import serverless from "serverless-http";
-import ytdl from "ytdl-core";
+import { play } from "play-dl";
 import cors from "cors";
 import { authenticateToken } from './auth_middleware.js';
 
@@ -14,71 +14,6 @@ app.use(cors({
 
 const router = express.Router();
 
-// Configuración de cookies para YouTube
-const cookies = [
-  {
-    "domain": ".youtube.com",
-    "expirationDate": 1736793326.182546,
-    "hostOnly": false,
-    "httpOnly": true,
-    "name": "LOGIN_INFO",
-    "path": "/",
-    "sameSite": "no_restriction",
-    "secure": true,
-    "session": false,
-    "value": "AGGVVk7keKQ:QUQ3MjNmejJrUzFZNktfd1JkdGdJb0YxM1pweUZNMjM5TmFPd2puR0s5QUxjZzFxbDRBd19EY0dLS3RlbFZ5aDBKT3QtQTJIaEJ4RkxZd2ZiTDBIZmJVeVVmNC1vNTR4X0tiZk9McG5CZ25sOVY5MHhOYkpKS09ELWp4dmlyS29IejVyakhVQnBLZEdxSUhHREYySmRJNUx6azN5ZHhn"
-  },
-  {
-    "domain": ".youtube.com",
-    "expirationDate": 1736793326.182637,
-    "hostOnly": false,
-    "httpOnly": true,
-    "name": "VISITOR_INFO1_LIVE",
-    "path": "/",
-    "sameSite": "no_restriction",
-    "secure": true,
-    "session": false,
-    "value": "4VwPMkB7W5A"
-  },
-  {
-    "domain": ".youtube.com",
-    "hostOnly": false,
-    "httpOnly": true,
-    "name": "YSC",
-    "path": "/",
-    "sameSite": "no_restriction",
-    "secure": true,
-    "session": true,
-    "value": "ZZZ999XXX111"
-  },
-  {
-    "domain": ".youtube.com",
-    "expirationDate": 1736793326.182601,
-    "hostOnly": false,
-    "httpOnly": false,
-    "name": "PREF",
-    "path": "/",
-    "sameSite": "unspecified",
-    "secure": true,
-    "session": false,
-    "value": "tz=America.Lima"
-  }
-];
-
-// Crear el agente de ytdl con las cookies
-const agent = ytdl.createAgent(cookies);
-
-// Opciones comunes para ytdl
-const ytdlOptions = {
-    agent,
-    requestOptions: {
-        headers: {
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
-    }
-};
-
-// Rutas existentes
 router.use(['/info', '/mp3', '/mp4'], authenticateToken);
 
 router.get("/", (req, res) => {
@@ -93,24 +28,16 @@ router.get("/info", async (req, res) => {
             return res.status(400).json({ error: "Invalid query - URL is required" });
         }
 
-        const isValid = ytdl.validateURL(url);
-
-        if (!isValid) {
-            return res.status(400).json({ error: "Invalid YouTube URL" });
-        }
-
-        const info = await ytdl.getInfo(url, ytdlOptions);
-
+        const videoInfo = await play.video_info(url);
+        
         res.json({ 
-            title: info.videoDetails.title,
-            thumbnail: info.videoDetails.thumbnails[info.videoDetails.thumbnails.length - 1]?.url,
-            duration: info.videoDetails.lengthSeconds,
-            author: info.videoDetails.author.name,
-            formats: info.formats.map(format => ({
-                quality: format.quality,
-                mimeType: format.mimeType,
-                contentLength: format.contentLength
-            }))
+            title: videoInfo.video_details.title,
+            thumbnail: videoInfo.video_details.thumbnails[0].url,
+            duration: videoInfo.video_details.durationInSec,
+            author: videoInfo.video_details.channel.name,
+            description: videoInfo.video_details.description,
+            views: videoInfo.video_details.views,
+            uploadedAt: videoInfo.video_details.uploadedAt
         });
     } catch (error) {
         console.error('Error in /info:', error);
@@ -126,40 +53,22 @@ router.get("/mp3", async (req, res) => {
             return res.status(400).json({ error: "Invalid query - URL is required" });
         }
 
-        const isValid = ytdl.validateURL(url);
-
-        if (!isValid) {
-            return res.status(400).json({ error: "Invalid YouTube URL" });
-        }
-
-        const info = await ytdl.getInfo(url, ytdlOptions);
-        const format = ytdl.chooseFormat(info.formats, {
-            quality: 'highestaudio',
-            filter: 'audioonly'
-        });
-
-        if (!format) {
-            throw new Error('No suitable audio format found');
-        }
-
-        const videoName = info.videoDetails.title.replace(/[^\w\s]/gi, '');
+        const videoInfo = await play.video_info(url);
+        const stream = await play.stream(url, { discordPlayerCompatibility: true });
+        
+        const videoName = videoInfo.video_details.title.replace(/[^\w\s]/gi, '');
         
         res.header('Content-Disposition', `attachment; filename="${videoName}.mp3"`);
         res.header('Content-Type', 'audio/mpeg');
 
-        const stream = ytdl(url, {
-            ...ytdlOptions,
-            format: format
-        });
+        stream.stream.pipe(res);
 
-        stream.on('error', (err) => {
+        stream.stream.on('error', (err) => {
             console.error('Stream error:', err);
             if (!res.headersSent) {
                 res.status(500).json({ error: 'Error during streaming', details: err.message });
             }
         });
-
-        stream.pipe(res);
     } catch (error) {
         console.error('Error in /mp3:', error);
         res.status(500).json({ error: error.message || "Error downloading audio" });
@@ -174,47 +83,29 @@ router.get("/mp4", async (req, res) => {
             return res.status(400).json({ error: "Invalid query - URL is required" });
         }
 
-        const isValid = ytdl.validateURL(url);
+        const videoInfo = await play.video_info(url);
+        const stream = await play.stream(url, { quality: 1080 }); // Highest quality
 
-        if (!isValid) {
-            return res.status(400).json({ error: "Invalid YouTube URL" });
-        }
-
-        const info = await ytdl.getInfo(url, ytdlOptions);
-        const format = ytdl.chooseFormat(info.formats, {
-            quality: 'highest',
-            filter: format => format.container === 'mp4'
-        });
-
-        if (!format) {
-            throw new Error('No suitable video format found');
-        }
-
-        const videoName = info.videoDetails.title.replace(/[^\w\s]/gi, '');
+        const videoName = videoInfo.video_details.title.replace(/[^\w\s]/gi, '');
 
         res.header('Content-Disposition', `attachment; filename="${videoName}.mp4"`);
         res.header('Content-Type', 'video/mp4');
 
-        const stream = ytdl(url, {
-            ...ytdlOptions,
-            format: format
-        });
+        stream.stream.pipe(res);
 
-        stream.on('error', (err) => {
+        stream.stream.on('error', (err) => {
             console.error('Stream error:', err);
             if (!res.headersSent) {
                 res.status(500).json({ error: 'Error during streaming', details: err.message });
             }
         });
-
-        stream.pipe(res);
     } catch (error) {
         console.error('Error in /mp4:', error);
         res.status(500).json({ error: error.message || "Error downloading video" });
     }
 });
 
-// Keep the packages endpoint
+// Mantener el endpoint de packages
 router.get("/packages", authenticateToken, async (req, res) => {
     try {
         const dependencies = {
@@ -222,7 +113,7 @@ router.get("/packages", authenticateToken, async (req, res) => {
             npm: process.env.npm_version || 'not available',
             dependencies: {
                 express: require('express/package.json').version,
-                'ytdl-core': require('ytdl-core/package.json').version,
+                'play-dl': require('play-dl/package.json').version,
                 cors: require('cors/package.json').version,
                 'serverless-http': require('serverless-http/package.json').version,
             },
