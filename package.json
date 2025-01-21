@@ -6,15 +6,15 @@
   "type": "module",
   "scripts": {
     "dev": "netlify dev",
-    "prebuild": "npm install",
+    "prebuild": "wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O ./functions/yt-dlp && chmod +x ./functions/yt-dlp && npm install",
     "build": "netlify functions:build --src functions",
     "deploy": "netlify deploy --prod"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.21.2",
-    "ytdl-core": "^4.11.5",
-    "serverless-http": "^3.2.0"
+    "serverless-http": "^3.2.0",
+    "yt-dlp-wrap": "^2.3.11"
   },
   "devDependencies": {
     "netlify-cli": "^18.0.1"

@@ -1,5 +1,5 @@
 [build]
-  command = "npm install && npm run build"
+  command = "./setup.sh && npm install && npm run build"
   functions = "functions"
   publish = "dist"
 
@@ -8,10 +8,11 @@
   external_node_modules = [
     "express",
     "serverless-http",
-    "youtube-dl-exec",
+    "yt-dlp-wrap",
     "cors"
   ]
   included_files = ["functions/**/*"]
+  node_bundler = "esbuild"
 
 [build.environment]
   NODE_VERSION = "18"
