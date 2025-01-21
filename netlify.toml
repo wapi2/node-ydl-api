@@ -1,19 +1,47 @@
 [build]
+  command = "npm install && npm run build"
   functions = "functions"
   publish = "dist"
 
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["express", "serverless-http", "ytdl-core", "cors", "@distube/ytdl-core"]
+  external_node_modules = [
+    "express",
+    "serverless-http",
+    "ytdl-core",
+    "cors",
+    "@distube/ytdl-core"
+  ]
+  included_files = ["functions/**/*"]
 
+[build.environment]
+  NODE_VERSION = "18"
+
+# Configuración de producción
+[context.production]
+  command = "npm install && npm run build"
+
+# Configuración para deploy de preview (pull requests)
+[context.deploy-preview]
+  command = "npm install && npm run build"
+
+# Redirecciones para la API
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/server/:splat"
   status = 200
+  force = true
 
-[dev]
-  port = 8888
+# Headers para CORS y seguridad
+[[headers]]
+  for = "/*"
+    [headers.values]
+    Access-Control-Allow-Origin = "*"
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
 
-# Configuración específica para esbuild
-[build.environment]
-  NODE_VERSION = "18"
+# Para asegurar que siempre sirva el index.html en rutas SPA
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

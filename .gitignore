@@ -1,8 +1,13 @@
 # dependencies
 /node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
 
 # production
-/.netlify
+/build
 
 # misc
 .DS_Store
@@ -19,3 +24,9 @@ yarn-error.log*
 
 # Local Netlify folder
 .netlify
+.netlify/
+/.netlify
+
+# IDE
+.idea/
+.vscode/
