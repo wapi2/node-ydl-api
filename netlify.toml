@@ -17,20 +17,12 @@
 [build.environment]
   NODE_VERSION = "18"
 
-# Redirecciones específicas para la API
-[[redirects]]
-  from = "/.netlify/functions/server/*"
-  to = "/.netlify/functions/server/:splat"
-  status = 200
-  force = true
-
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/server/:splat"
   status = 200
   force = true
 
-# Headers para CORS
 [[headers]]
   for = "/*"
     [headers.values]
