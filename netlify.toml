@@ -17,31 +17,23 @@
 [build.environment]
   NODE_VERSION = "18"
 
-# Configuración de producción
-[context.production]
-  command = "npm install && npm run build"
+# Redirecciones específicas para la API
+[[redirects]]
+  from = "/.netlify/functions/server/*"
+  to = "/.netlify/functions/server/:splat"
+  status = 200
+  force = true
 
-# Configuración para deploy de preview (pull requests)
-[context.deploy-preview]
-  command = "npm install && npm run build"
-
-# Redirecciones para la API
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/server/:splat"
   status = 200
   force = true
 
-# Headers para CORS y seguridad
+# Headers para CORS
 [[headers]]
   for = "/*"
     [headers.values]
     Access-Control-Allow-Origin = "*"
-    X-Frame-Options = "DENY"
-    X-XSS-Protection = "1; mode=block"
-
-# Para asegurar que siempre sirva el index.html en rutas SPA
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Authorization, Origin, Content-Type, Accept"
