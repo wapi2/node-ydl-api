@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "netlify dev",
-    "prebuild": "curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o ./functions/yt-dlp && chmod +x ./functions/yt-dlp",
+    "prebuild": "python3 -V && which python3 && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o ./functions/yt-dlp && chmod +x ./functions/yt-dlp",
     "build": "netlify functions:build --src functions",
     "deploy": "netlify deploy --prod"
   },
@@ -20,6 +20,7 @@
     "netlify-cli": "^18.0.1"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.0.0",
+    "python": "3.13.1"
   }
 }

@@ -6,9 +6,11 @@ import ytdlp from 'yt-dlp-wrap';
 
 const app = express();
 
-// Inicializar yt-dlp
+// Inicializar yt-dlp con la ruta específica a Python
 const YTDlpWrap = ytdlp.default;
-const youtubeDl = new YTDlpWrap('/var/task/functions/yt-dlp');
+const youtubeDl = new YTDlpWrap('/var/task/functions/yt-dlp', [], { 
+    pythonPath: 'python3'  // Especificamos usar python3
+});
 
 app.use(cors({
   origin: '*',
@@ -121,35 +123,6 @@ router.get("/mp4", async (req, res) => {
     } catch (error) {
         console.error('Error in /mp4:', error);
         res.status(500).json({ error: error.message || "Error downloading video" });
-    }
-});
-
-// Endpoint de versiones
-router.get("/packages", authenticateToken, async (req, res) => {
-    try {
-        const dependencies = {
-            node: process.version,
-            npm: process.env.npm_version || 'not available',
-            dependencies: {
-                express: require('express/package.json').version,
-                'yt-dlp-wrap': require('yt-dlp-wrap/package.json').version,
-                cors: require('cors/package.json').version,
-                'serverless-http': require('serverless-http/package.json').version,
-            },
-            environment: {
-                NODE_ENV: process.env.NODE_ENV,
-                NETLIFY: process.env.NETLIFY,
-                CONTEXT: process.env.CONTEXT
-            }
-        };
-
-        res.json(dependencies);
-    } catch (error) {
-        console.error('Error getting package versions:', error);
-        res.status(500).json({ 
-            error: "Error reading package versions",
-            details: error.message
-        });
     }
 });
 

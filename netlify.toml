@@ -11,20 +11,11 @@
     "yt-dlp-wrap",
     "cors"
   ]
-  included_files = ["functions/**/*", "functions/yt-dlp"]
+  included_files = ["functions/**/*"]
 
 [build.environment]
   NODE_VERSION = "18"
+  PYTHON_VERSION = "3.13.1"  # Especificamos la versión de Python
 
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/server/:splat"
-  status = 200
-  force = true
-
-[[headers]]
-  for = "/*"
-    [headers.values]
-    Access-Control-Allow-Origin = "*"
-    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
-    Access-Control-Allow-Headers = "Authorization, Origin, Content-Type, Accept"
+[build.processing]
+  skip_processing = true
