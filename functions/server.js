@@ -6,10 +6,15 @@ import ytdlp from 'yt-dlp-wrap';
 
 const app = express();
 
-// Inicializar yt-dlp con la ruta específica a Python
+// Inicializar yt-dlp usando las variables de entorno
 const YTDlpWrap = ytdlp.default;
-const youtubeDl = new YTDlpWrap('/var/task/functions/yt-dlp', [], { 
-    pythonPath: 'python3'  // Especificamos usar python3
+const youtubeDl = new YTDlpWrap('/var/task/functions/yt-dlp', [], {
+    pythonPath: process.env.PYTHON_PATH || '/var/lang/python3.13/bin/python3.13',
+    env: {
+        ...process.env,
+        PYTHONPATH: process.env.PYTHONPATH || '/var/task/functions',
+        PATH: process.env.PATH
+    }
 });
 
 app.use(cors({
