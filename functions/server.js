@@ -3,9 +3,6 @@ import serverless from "serverless-http";
 import ytdl from "ytdl-core";
 import cors from "cors";
 import { authenticateToken } from './auth_middleware.js';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 const app = express();
 
@@ -34,33 +31,36 @@ router.get("/", (req, res) => {
     res.sendStatus(200);
 });
 
-// Endpoint protegido para ver package-lock.json
+// Endpoint para ver versiones de paquetes
 router.get("/packages", authenticateToken, async (req, res) => {
     try {
-        const packageLock = await fs.promises.readFile('package-lock.json', 'utf8');
-        const packageData = JSON.parse(packageLock);
-        
-        // Extraer solo la información relevante de las dependencias
-        const dependencies = {};
-        for (const [pkg, info] of Object.entries(packageData.packages)) {
-            if (pkg === '') continue; // Saltar el paquete raíz
-            dependencies[pkg] = {
-                version: info.version,
-                resolved: info.resolved,
-                required: info.requires || {}
-            };
-        }
+        // Leer las versiones directamente de los node_modules
+        const dependencies = {
+            node: process.version,
+            npm: process.env.npm_version || 'not available',
+            dependencies: {
+                express: require('express/package.json').version,
+                'ytdl-core': require('ytdl-core/package.json').version,
+                cors: require('cors/package.json').version,
+                'serverless-http': require('serverless-http/package.json').version,
+            },
+            environment: {
+                NODE_ENV: process.env.NODE_ENV,
+                NETLIFY: process.env.NETLIFY,
+                CONTEXT: process.env.CONTEXT,
+                DEPLOY_URL: process.env.DEPLOY_URL,
+                DEPLOY_PRIME_URL: process.env.DEPLOY_PRIME_URL,
+                URL: process.env.URL
+            }
+        };
 
-        res.json({
-            node_version: process.version,
-            npm_version: packageData.lockfileVersion,
-            dependencies
-        });
+        res.json(dependencies);
     } catch (error) {
-        console.error('Error reading package-lock.json:', error);
+        console.error('Error getting package versions:', error);
         res.status(500).json({ 
-            error: "Error reading dependencies info",
-            details: error.message
+            error: "Error reading package versions",
+            details: error.message,
+            stack: error.stack
         });
     }
 });
