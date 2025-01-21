@@ -2,12 +2,13 @@ import express from "express";
 import serverless from "serverless-http";
 import cors from "cors";
 import { authenticateToken } from './auth_middleware.js';
-import { YTDlpWrap } from 'yt-dlp-wrap';
+import ytdlp from 'yt-dlp-wrap';
 
 const app = express();
 
-// Inicializar yt-dlp con la ruta relativa al binario
-const ytDlp = new YTDlpWrap('/var/task/functions/yt-dlp');
+// Inicializar yt-dlp
+const YTDlpWrap = ytdlp.default;
+const youtubeDl = new YTDlpWrap('/var/task/functions/yt-dlp');
 
 app.use(cors({
   origin: '*',
@@ -31,7 +32,7 @@ router.get("/info", async (req, res) => {
             return res.status(400).json({ error: "Invalid query - URL is required" });
         }
 
-        const videoInfo = await ytDlp.getVideoInfo(url);
+        const videoInfo = await youtubeDl.getVideoInfo(url);
         
         res.json({ 
             title: videoInfo.title,
@@ -40,12 +41,12 @@ router.get("/info", async (req, res) => {
             uploader: videoInfo.uploader,
             description: videoInfo.description,
             view_count: videoInfo.view_count,
-            formats: videoInfo.formats.map(format => ({
+            formats: videoInfo.formats?.map(format => ({
                 format_id: format.format_id,
                 ext: format.ext,
                 filesize: format.filesize,
                 format_note: format.format_note
-            }))
+            })) || []
         });
     } catch (error) {
         console.error('Error in /info:', error);
@@ -61,13 +62,13 @@ router.get("/mp3", async (req, res) => {
             return res.status(400).json({ error: "Invalid query - URL is required" });
         }
 
-        const videoInfo = await ytDlp.getVideoInfo(url);
+        const videoInfo = await youtubeDl.getVideoInfo(url);
         const videoName = videoInfo.title.replace(/[^\w\s]/gi, '');
         
         res.header('Content-Disposition', `attachment; filename="${videoName}.mp3"`);
         res.header('Content-Type', 'audio/mpeg');
 
-        const stream = await ytDlp.execStream([
+        const stream = await youtubeDl.execStream([
             url,
             '-f', 'bestaudio',
             '--extract-audio',
@@ -97,13 +98,13 @@ router.get("/mp4", async (req, res) => {
             return res.status(400).json({ error: "Invalid query - URL is required" });
         }
 
-        const videoInfo = await ytDlp.getVideoInfo(url);
+        const videoInfo = await youtubeDl.getVideoInfo(url);
         const videoName = videoInfo.title.replace(/[^\w\s]/gi, '');
 
         res.header('Content-Disposition', `attachment; filename="${videoName}.mp4"`);
         res.header('Content-Type', 'video/mp4');
 
-        const stream = await ytDlp.execStream([
+        const stream = await youtubeDl.execStream([
             url,
             '-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
             '-o', '-'
@@ -123,7 +124,7 @@ router.get("/mp4", async (req, res) => {
     }
 });
 
-// Mantener el endpoint de versiones
+// Endpoint de versiones
 router.get("/packages", authenticateToken, async (req, res) => {
     try {
         const dependencies = {
