@@ -3,6 +3,9 @@ import serverless from "serverless-http";
 import ytdl from "ytdl-core";
 import cors from "cors";
 import { authenticateToken } from './auth_middleware.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const app = express();
 
@@ -29,6 +32,37 @@ router.use(['/info', '/mp3', '/mp4'], authenticateToken);
 
 router.get("/", (req, res) => {
     res.sendStatus(200);
+});
+
+// Endpoint protegido para ver package-lock.json
+router.get("/packages", authenticateToken, async (req, res) => {
+    try {
+        const packageLock = await fs.promises.readFile('package-lock.json', 'utf8');
+        const packageData = JSON.parse(packageLock);
+        
+        // Extraer solo la información relevante de las dependencias
+        const dependencies = {};
+        for (const [pkg, info] of Object.entries(packageData.packages)) {
+            if (pkg === '') continue; // Saltar el paquete raíz
+            dependencies[pkg] = {
+                version: info.version,
+                resolved: info.resolved,
+                required: info.requires || {}
+            };
+        }
+
+        res.json({
+            node_version: process.version,
+            npm_version: packageData.lockfileVersion,
+            dependencies
+        });
+    } catch (error) {
+        console.error('Error reading package-lock.json:', error);
+        res.status(500).json({ 
+            error: "Error reading dependencies info",
+            details: error.message
+        });
+    }
 });
 
 router.get("/info", async (req, res) => {
