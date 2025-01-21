@@ -3,13 +3,11 @@ import serverless from "serverless-http";
 import cors from "cors";
 import { authenticateToken } from './auth_middleware.js';
 import { YTDlpWrap } from 'yt-dlp-wrap';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
 
 const app = express();
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ytDlpPath = join(__dirname, 'yt-dlp');
-const ytDlp = new YTDlpWrap(ytDlpPath);
+
+// Inicializar yt-dlp con la ruta relativa al binario
+const ytDlp = new YTDlpWrap('/var/task/functions/yt-dlp');
 
 app.use(cors({
   origin: '*',
@@ -122,6 +120,35 @@ router.get("/mp4", async (req, res) => {
     } catch (error) {
         console.error('Error in /mp4:', error);
         res.status(500).json({ error: error.message || "Error downloading video" });
+    }
+});
+
+// Mantener el endpoint de versiones
+router.get("/packages", authenticateToken, async (req, res) => {
+    try {
+        const dependencies = {
+            node: process.version,
+            npm: process.env.npm_version || 'not available',
+            dependencies: {
+                express: require('express/package.json').version,
+                'yt-dlp-wrap': require('yt-dlp-wrap/package.json').version,
+                cors: require('cors/package.json').version,
+                'serverless-http': require('serverless-http/package.json').version,
+            },
+            environment: {
+                NODE_ENV: process.env.NODE_ENV,
+                NETLIFY: process.env.NETLIFY,
+                CONTEXT: process.env.CONTEXT
+            }
+        };
+
+        res.json(dependencies);
+    } catch (error) {
+        console.error('Error getting package versions:', error);
+        res.status(500).json({ 
+            error: "Error reading package versions",
+            details: error.message
+        });
     }
 });
 
