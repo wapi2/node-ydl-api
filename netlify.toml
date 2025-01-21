@@ -11,8 +11,7 @@
     "yt-dlp-wrap",
     "cors"
   ]
-  included_files = ["functions/**/*"]
-  node_bundler = "esbuild"
+  included_files = ["functions/**/*", "functions/yt-dlp"]
 
 [build.environment]
   NODE_VERSION = "18"
