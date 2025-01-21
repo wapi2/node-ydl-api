@@ -8,7 +8,7 @@
   external_node_modules = [
     "express",
     "serverless-http",
-    "play-dl",
+    "youtube-dl-exec",
     "cors"
   ]
   included_files = ["functions/**/*"]

@@ -1,6 +1,6 @@
 import express from "express";
 import serverless from "serverless-http";
-import * as playdl from "play-dl";  // Cambiado: importación correcta
+import youtubedl from "youtube-dl-exec";
 import cors from "cors";
 import { authenticateToken } from './auth_middleware.js';
 
@@ -28,16 +28,28 @@ router.get("/info", async (req, res) => {
             return res.status(400).json({ error: "Invalid query - URL is required" });
         }
 
-        const videoInfo = await playdl.video_basic_info(url);  // Cambiado: usando video_basic_info
+        const videoInfo = await youtubedl(url, {
+            dumpSingleJson: true,
+            noCheckCertificates: true,
+            noWarnings: true,
+            preferFreeFormats: true
+        });
         
         res.json({ 
-            title: videoInfo.video_details.title,
-            thumbnail: videoInfo.video_details.thumbnails[0].url,
-            duration: videoInfo.video_details.durationInSec,
-            author: videoInfo.video_details.channel?.name,
-            description: videoInfo.video_details.description,
-            views: videoInfo.video_details.views,
-            uploadedAt: videoInfo.video_details.uploadedAt
+            title: videoInfo.title,
+            thumbnail: videoInfo.thumbnail,
+            duration: videoInfo.duration,
+            author: videoInfo.uploader,
+            description: videoInfo.description,
+            view_count: videoInfo.view_count,
+            upload_date: videoInfo.upload_date,
+            formats: videoInfo.formats.map(format => ({
+                format_id: format.format_id,
+                ext: format.ext,
+                filesize: format.filesize,
+                acodec: format.acodec,
+                vcodec: format.vcodec
+            }))
         });
     } catch (error) {
         console.error('Error in /info:', error);
@@ -53,25 +65,32 @@ router.get("/mp3", async (req, res) => {
             return res.status(400).json({ error: "Invalid query - URL is required" });
         }
 
-        const videoInfo = await playdl.video_basic_info(url);
-        const stream = await playdl.stream(url, { 
-            discordPlayerCompatibility: true,
-            quality: 2  // high quality audio
+        // Obtener información del video
+        const videoInfo = await youtubedl(url, {
+            dumpSingleJson: true,
+            noCheckCertificates: true,
+            noWarnings: true
         });
-        
-        const videoName = videoInfo.video_details.title.replace(/[^\w\s]/gi, '');
+
+        const videoName = videoInfo.title.replace(/[^\w\s]/gi, '');
         
         res.header('Content-Disposition', `attachment; filename="${videoName}.mp3"`);
         res.header('Content-Type', 'audio/mpeg');
 
-        stream.stream.pipe(res);
-
-        stream.stream.on('error', (err) => {
-            console.error('Stream error:', err);
-            if (!res.headersSent) {
-                res.status(500).json({ error: 'Error during streaming', details: err.message });
-            }
+        // Descargar el audio
+        const download = youtubedl.exec(url, {
+            extractAudio: true,
+            audioFormat: 'mp3',
+            output: '-',  // Output to stdout
+            quiet: true
         });
+
+        download.stdout.pipe(res);
+
+        download.stderr.on('data', (data) => {
+            console.error(`stderr: ${data}`);
+        });
+
     } catch (error) {
         console.error('Error in /mp3:', error);
         res.status(500).json({ error: error.message || "Error downloading audio" });
@@ -86,25 +105,31 @@ router.get("/mp4", async (req, res) => {
             return res.status(400).json({ error: "Invalid query - URL is required" });
         }
 
-        const videoInfo = await playdl.video_basic_info(url);
-        const stream = await playdl.stream(url, { 
-            quality: 1080,  // Highest quality
-            htmlOnlyQuality: true
+        // Obtener información del video
+        const videoInfo = await youtubedl(url, {
+            dumpSingleJson: true,
+            noCheckCertificates: true,
+            noWarnings: true
         });
 
-        const videoName = videoInfo.video_details.title.replace(/[^\w\s]/gi, '');
+        const videoName = videoInfo.title.replace(/[^\w\s]/gi, '');
 
         res.header('Content-Disposition', `attachment; filename="${videoName}.mp4"`);
         res.header('Content-Type', 'video/mp4');
 
-        stream.stream.pipe(res);
-
-        stream.stream.on('error', (err) => {
-            console.error('Stream error:', err);
-            if (!res.headersSent) {
-                res.status(500).json({ error: 'Error during streaming', details: err.message });
-            }
+        // Descargar el video
+        const download = youtubedl.exec(url, {
+            format: 'best',  // Mejor calidad disponible
+            output: '-',     // Output to stdout
+            quiet: true
         });
+
+        download.stdout.pipe(res);
+
+        download.stderr.on('data', (data) => {
+            console.error(`stderr: ${data}`);
+        });
+
     } catch (error) {
         console.error('Error in /mp4:', error);
         res.status(500).json({ error: error.message || "Error downloading video" });
@@ -119,7 +144,7 @@ router.get("/packages", authenticateToken, async (req, res) => {
             npm: process.env.npm_version || 'not available',
             dependencies: {
                 express: require('express/package.json').version,
-                'play-dl': require('play-dl/package.json').version,
+                'youtube-dl-exec': require('youtube-dl-exec/package.json').version,
                 cors: require('cors/package.json').version,
                 'serverless-http': require('serverless-http/package.json').version,
             },
