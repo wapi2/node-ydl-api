@@ -1,21 +1,10 @@
 import express from "express";
 import serverless from "serverless-http";
+import ytdl from "ytdl-core";
 import cors from "cors";
 import { authenticateToken } from './auth_middleware.js';
-import ytdlp from 'yt-dlp-wrap';
 
 const app = express();
-
-// Inicializar yt-dlp usando las variables de entorno
-const YTDlpWrap = ytdlp.default;
-const youtubeDl = new YTDlpWrap('/var/task/functions/yt-dlp', [], {
-    pythonPath: process.env.PYTHON_PATH || '/var/lang/python3.13/bin/python3.13',
-    env: {
-        ...process.env,
-        PYTHONPATH: process.env.PYTHONPATH || '/var/task/functions',
-        PATH: process.env.PATH
-    }
-});
 
 app.use(cors({
   origin: '*',
@@ -24,6 +13,22 @@ app.use(cors({
 }));
 
 const router = express.Router();
+
+// Configuración para ytdl-core
+const ytdlOptions = {
+    requestOptions: {
+        headers: {
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'accept-language': 'en-US,en;q=0.9',
+            'sec-fetch-dest': 'document',
+            'sec-fetch-mode': 'navigate',
+            'sec-fetch-site': 'none',
+            'sec-fetch-user': '?1',
+            'upgrade-insecure-requests': '1'
+        }
+    }
+};
 
 router.use(['/info', '/mp3', '/mp4'], authenticateToken);
 
@@ -39,21 +44,20 @@ router.get("/info", async (req, res) => {
             return res.status(400).json({ error: "Invalid query - URL is required" });
         }
 
-        const videoInfo = await youtubeDl.getVideoInfo(url);
-        
+        const isValid = ytdl.validateURL(url);
+
+        if (!isValid) {
+            return res.status(400).json({ error: "Invalid YouTube URL" });
+        }
+
+        const info = await ytdl.getBasicInfo(url, ytdlOptions);
+
         res.json({ 
-            title: videoInfo.title,
-            thumbnail: videoInfo.thumbnail,
-            duration: videoInfo.duration,
-            uploader: videoInfo.uploader,
-            description: videoInfo.description,
-            view_count: videoInfo.view_count,
-            formats: videoInfo.formats?.map(format => ({
-                format_id: format.format_id,
-                ext: format.ext,
-                filesize: format.filesize,
-                format_note: format.format_note
-            })) || []
+            title: info.videoDetails.title,
+            thumbnail: info.videoDetails.thumbnails[info.videoDetails.thumbnails.length - 1]?.url,
+            duration: info.videoDetails.lengthSeconds,
+            author: info.videoDetails.author.name,
+            description: info.videoDetails.description
         });
     } catch (error) {
         console.error('Error in /info:', error);
@@ -69,19 +73,31 @@ router.get("/mp3", async (req, res) => {
             return res.status(400).json({ error: "Invalid query - URL is required" });
         }
 
-        const videoInfo = await youtubeDl.getVideoInfo(url);
-        const videoName = videoInfo.title.replace(/[^\w\s]/gi, '');
+        const isValid = ytdl.validateURL(url);
+
+        if (!isValid) {
+            return res.status(400).json({ error: "Invalid YouTube URL" });
+        }
+
+        const info = await ytdl.getBasicInfo(url, ytdlOptions);
+        const format = ytdl.chooseFormat(info.formats, {
+            quality: 'highestaudio',
+            filter: 'audioonly'
+        });
+
+        if (!format) {
+            throw new Error('No suitable audio format found');
+        }
+
+        const videoName = info.videoDetails.title.replace(/[^\w\s]/gi, '');
         
         res.header('Content-Disposition', `attachment; filename="${videoName}.mp3"`);
         res.header('Content-Type', 'audio/mpeg');
 
-        const stream = await youtubeDl.execStream([
-            url,
-            '-f', 'bestaudio',
-            '--extract-audio',
-            '--audio-format', 'mp3',
-            '-o', '-'
-        ]);
+        const stream = ytdl(url, {
+            ...ytdlOptions,
+            format: format
+        });
 
         stream.pipe(res);
 
@@ -105,17 +121,31 @@ router.get("/mp4", async (req, res) => {
             return res.status(400).json({ error: "Invalid query - URL is required" });
         }
 
-        const videoInfo = await youtubeDl.getVideoInfo(url);
-        const videoName = videoInfo.title.replace(/[^\w\s]/gi, '');
+        const isValid = ytdl.validateURL(url);
+
+        if (!isValid) {
+            return res.status(400).json({ error: "Invalid YouTube URL" });
+        }
+
+        const info = await ytdl.getBasicInfo(url, ytdlOptions);
+        const format = ytdl.chooseFormat(info.formats, {
+            quality: 'highest',
+            filter: format => format.container === 'mp4'
+        });
+
+        if (!format) {
+            throw new Error('No suitable video format found');
+        }
+
+        const videoName = info.videoDetails.title.replace(/[^\w\s]/gi, '');
 
         res.header('Content-Disposition', `attachment; filename="${videoName}.mp4"`);
         res.header('Content-Type', 'video/mp4');
 
-        const stream = await youtubeDl.execStream([
-            url,
-            '-f', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-            '-o', '-'
-        ]);
+        const stream = ytdl(url, {
+            ...ytdlOptions,
+            format: format
+        });
 
         stream.pipe(res);
 

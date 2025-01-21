@@ -8,16 +8,12 @@
   external_node_modules = [
     "express",
     "serverless-http",
-    "yt-dlp-wrap",
+    "ytdl-core",
     "cors"
   ]
-  included_files = ["functions/**/*"]
 
-[build.environment]
-  NODE_VERSION = "18"
-  PYTHON_VERSION = "3.13.1"
-  PYTHON_PATH = "/var/lang/python3.13/bin/python3.13"
-  PYTHONPATH = "/var/task/functions"
-
-[build.processing]
-  skip_processing = true
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/server/:splat"
+  status = 200
+  force = true
